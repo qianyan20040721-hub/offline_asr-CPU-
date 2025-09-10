@@ -1,0 +1,17 @@
+{
+    "framework": "pytorch",
+    "task": "speaker-verification",
+    "model": {
+        "type": "cam++-sv",
+        "model_config": {
+            "sample_rate": 16000,
+            "fbank_dim": 80,
+            "emb_size": 512
+        },
+        "pretrained_model": "campplus_cn_3dspeaker.bin",
+        "yesOrno_thr": 0.5
+    },
+    "pipeline": {
+        "type": "speaker-verification"
+    }
+}
