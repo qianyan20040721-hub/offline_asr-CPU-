@@ -1,0 +1,17 @@
+torch
+tqdm>=4.42.0
+scipy>=1.7.0
+numpy
+scikit-learn==1.0.2
+soundfile
+kaldiio
+pyyaml
+matplotlib
+pandas
+openpyxl
+funasr_onnx
+onnxruntime
+onnx
+faiss
+WeTextProcessing
+pycorrector
