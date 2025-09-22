@@ -1,29 +1,33 @@
 # Fuansr+3d_Speaker语音转写与说话人识别系统(CPU单进程版)
+
 ##  项目目录
+
 ```
-isqa-offline-asr/
-  ├── README.md                # 项目说明文档
-  ├── requirements.txt         # Python 依赖
-  ├── main.py                  # 运行接口
-  ├── .gitignore               # Git 忽略文件
-  ├── speakerlab/   			 # 3D_Speaker
-  │
-  ├── embeding_faiss/   		 # 声纹库
-  │   ├── faiss.index
-  │   └── speaker_names.pkl
-  │
-  ├── models/                  # 模型文件
-  │   ├── Paramformer     	 # ASR 模型配置
-  │   ├── CAM++  				 # 说话人识别配置
-  │   └── VAD        			 # VAD配置
-  │   └── PUNC        		 # 标点模型配置
-│   └── macbert4csc			 #纠错模型配置
-  │
-  └──  ASR/                    # 脚本工具
-      ├── diarization_onnx.py  # 说话人分离/确认
-      ├── PROFILE.py           # log
-      └── speaker_ASR_onnx.py  # pipeline
+offline-asr/
+├── README.md                 # 项目说明文档
+├── requirements.txt          # Python 依赖列表
+├── main.py                   # 程序入口（运行接口）
+├── .gitignore                # Git 忽略规则
+│
+├── speakerlab/               # 3D-Speaker 源码
+│
+├── embeding_faiss/           # 声纹库目录
+│   ├── faiss.index           # 声纹索引文件
+│   └── speaker_names.pkl     # 说话人名称映射
+│
+├── models/                   # 模型文件目录
+│   ├── Paramformer/          # ASR 模型配置
+│   ├── CAM++/                # 说话人识别模型配置
+│   ├── VAD/                  # VAD 模型配置
+│   ├── PUNC/                 # 标点模型配置
+│   └── macbert4csc/          # 文本纠错模型配置
+│
+└── ASR/                      # 脚本与工具
+    ├── diarization_onnx.py   # 说话人分离/确认脚本
+    ├── PROFILE.py            # 日志配置
+    └── speaker_ASR_onnx.py   # ASR + 说话人识别 pipeline
 ```
+
 ##  项目简介
 
 本项目实现了一个 **离线语音转写与说话人识别系统**，支持以下功能：
@@ -61,35 +65,6 @@ isqa-offline-asr/
 
 ### 测试环境
 
-- **CPU**：Intel i7-12700H
-- **Python**：3.10
-- **运行方式**：仅在 **纯 CPU 环境** 测试，其余 GPU 环境理论上也支持
-- ```
-isqa-offline-asr/
-  ├── README.md                # 项目说明文档
-  ├── requirements.txt         # Python 依赖
-  ├── main.py                  # 运行接口
-  ├── .gitignore               # Git 忽略文件
-  ├── speakerlab/   			 # 3D_Speaker
-  │
-  ├── embeding_faiss/   		 # 声纹库
-  │   ├── faiss.index
-  │   └── speaker_names.pkl
-  │
-  ├── models/                  # 模型文件
-  │   ├── Paramformer     	 # ASR 模型配置
-  │   ├── CAM++  				 # 说话人识别配置
-  │   └── VAD        			 # VAD配置
-  │   └── PUNC        		 # 标点模型配置
-│   └── macbert4csc			 #纠错模型配置
-  │
-  └──  ASR/                    # 脚本工具
-      ├── diarization_onnx.py  # 说话人分离/确认
-      ├── PROFILE.py           # log
-      └── speaker_ASR_onnx.py  # pipeline
-  ```
-  
-  
 
 ### 依赖
 
@@ -106,10 +81,10 @@ pip install -r requirements.txt
 
 ## 线程调控
 
-为充分利用多核 CPU，需要合理设置线程数：
+为充分利用多核 CPU，合理设置线程数：
 
 ```
-NUM_THREADS = 8
+NUM_THREADS = 6
 os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
 os.environ["OPENBLAS_NUM_THREADS"] = str(NUM_THREADS)
 os.environ["MKL_NUM_THREADS"] = str(NUM_THREADS)
@@ -186,7 +161,8 @@ def run_asr(diar_labels, wav_cache):
 
 ------
 
-## 🔄 推理流程
+
+## 推理流程
 
 原本说话人分离和声纹识别都需要提取声纹，现使用CAM++_3dspeaker模型将声纹识别流程嵌入说话人分离流程中，声纹提取流程合并仅提取一遍声纹便可以完成说话人分离和声纹识别。
 
@@ -209,26 +185,19 @@ ITN + 标点 + 语义纠错
  ✅ 带时间戳的最终文本
 ```
 
-------
+## 模型速度
 
-## 模型调优
+**测试环境**
 
-### 口吃 / 重复问题
+- CPU: Intel Core i7-12700H
+- 系统: Windows
 
-测试发现 **Paraformer 量化版** 存在明显的口吃与口语化问题。
+| 模型方案              | 音频数量 | 总耗时 (s) | 总时长 (s) | 平均占比 |
+| --------------------- | -------: | ---------: | ---------: | -------: |
+| 非量化模型 + 语义纠错 |        5 |     472.40 |   11277.95 |    4.19% |
+| 量化模型 + 语义纠错   |        5 |     461.88 |   11277.95 |    4.10% |
 
-#### ✅ 方案 1：参数调整+正在匹配（已验证）
-
-| 参数                           | 调整方向 | 作用                   |
-| ------------------------------ | -------- | ---------------------- |
-| `predictor.threshold`          | 增大     | 减少重复触发           |
-| `predictor.smooth_factor2`     | 增大     | 平滑 token，缓解重复   |
-| `predictor.tail_threshold`     | 调整     | 改善尾端重复           |
-| `frontend.frame_shift`         | 调整     | 平滑特征，减少短 token |
-
-👉 示例：40 分钟会议音频中，口吃现象 **20 次 → 8 次**
-
-#### 方案 2：更换模型
+## 更换模型
 
 | 模型                      | 精度 (WER)      | 特点                                                         | 热词能力  | 长语音/噪声鲁棒性                          | 速度        | 适用场景              |
 | ------------------------- | --------------- | ------------------------------------------------------------ | :-------- | ------------------------------------------ | ----------- | --------------------- |
