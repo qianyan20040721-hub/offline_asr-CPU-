@@ -1,4 +1,4 @@
-# Fuansr+3d_Speaker语音转写与说话人识别系统(CPU单进程版)
+# Funasr+3d_Speaker语音转写与说话人识别系统(CPU单进程版)
 
 ##  项目目录
 
